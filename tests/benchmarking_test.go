@@ -52,6 +52,6 @@ func BenchmarkFibIteratively(b *testing.B) {
 		ok      examples/tests  3.442s
 	```
 	As you could see, the difference between iterative vs recursive approach, performance wise
-	and time complexity wise, is way remarkable!
-	Let alone the space complexity.
+	and time complexity wise, is way significant!
+	Let alone the stack space complexity.
 */
