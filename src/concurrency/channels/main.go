@@ -1,24 +1,56 @@
 package main
 
 import (
-	"fmt"
+	"bufio"
+	"os"
+	"strconv"
+	"sync"
+	"time"
 )
 
-func producer(ch chan int) {
-	for i := 0; i < 5; i++ {
-		ch <- i // Send value to the channel
-	}
-	close(ch) // Indicate producer is done
+func doHeavyWork(n int) int {
+	time.Sleep(time.Second)
+	return n
 }
 
-func consumer(ch chan int) {
-	for num := range ch { // Receive from the channel
-		fmt.Println(num)
+func producer(ch chan int) {
+	wg := sync.WaitGroup{}
+	for i := 0; i < 1000000; i++ {
+		wg.Add(1)
+		go func(num int) {
+			defer wg.Done()
+			ch <- doHeavyWork(num)
+		}(i)
 	}
+	wg.Wait()
+	close(ch)
+}
+
+func consumer(ch chan int, w *bufio.Writer) {
+	wg := sync.WaitGroup{}
+	m := sync.Mutex{}
+	for v := range ch {
+		wg.Add(1)
+		go func(w *bufio.Writer, val int) {
+			defer wg.Done()
+			m.Lock()
+			defer m.Unlock()
+			w.WriteString(strconv.Itoa(val) + "\n")
+		}(w, v)
+	}
+	wg.Wait()
 }
 
 func main() {
-	ch := make(chan int) // Create an unbuffered channel
-	go producer(ch)      // Launch producer goroutine
-	consumer(ch)         // Call consumer directly
+	ch := make(chan int)
+
+	go producer(ch)
+
+	file, _ := os.Create("src/concurrency/channels/output.txt")
+	defer file.Close()
+
+	writer := bufio.NewWriter(file)
+	defer writer.Flush()
+
+	consumer(ch, writer)
 }
